@@ -15,7 +15,8 @@
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@prisma/client": "^6.5.0"
+    "@prisma/client": "^6.5.0",
+    "next-auth": "^4.24.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
