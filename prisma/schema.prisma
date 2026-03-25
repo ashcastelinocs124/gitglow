@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GenerationStatus {
+  draft
+  published
+  failed
+}
+
+enum PublishMode {
+  manual
+  connected
+}
+
+model User {
+  id                String              @id @default(cuid())
+  email             String?             @unique
+  name              String?
+  githubLogin       String?             @unique
+  githubProfileUrl  String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  githubAccounts    GitHubAccount[]
+  repositories      ImportedRepository[]
+  narratives        ProfileNarrative[]
+  featuredProjects  FeaturedProject[]
+  generations       ProfileGeneration[]
+  assets            GeneratedAsset[]
+  publishEvents     PublishEvent[]
+}
+
+model GitHubAccount {
+  id                 String   @id @default(cuid())
+  userId             String
+  githubUserId       String   @unique
+  login              String
+  accessToken        String?
+  refreshToken       String?
+  tokenExpiresAt     DateTime?
+  scope              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ImportedRepository {
+  id                 String   @id @default(cuid())
+  userId             String
+  githubRepoId       String   @unique
+  name               String
+  ownerLogin         String
+  description        String?
+  primaryLanguage    String?
+  stars              Int      @default(0)
+  forks              Int      @default(0)
+  isPinned           Boolean  @default(false)
+  isFeatured         Boolean  @default(false)
+  pushedAt           DateTime?
+  importedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  featuredProjects   FeaturedProject[]
+
+  @@index([userId])
+  @@index([userId, isFeatured])
+}
+
+model ProfileNarrative {
+  id                   String   @id @default(cuid())
+  userId               String
+  bio                  String?
+  goals                String?
+  archetype            String?
+  experienceOutsideGitHub String?
+  voiceNotes           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FeaturedProject {
+  id            String              @id @default(cuid())
+  userId        String
+  repositoryId  String?
+  title         String
+  summary       String?
+  source        String              @default("github")
+  position      Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository    ImportedRepository? @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([repositoryId])
+}
+
+model ProfileGeneration {
+  id              String           @id @default(cuid())
+  userId          String
+  headline        String?
+  markdown        String
+  profileModel    Json
+  status          GenerationStatus @default(draft)
+  publishMode     PublishMode      @default(manual)
+  generatedAt     DateTime         @default(now())
+  publishedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets          GeneratedAsset[]
+  publishEvents   PublishEvent[]
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+model GeneratedAsset {
+  id              String            @id @default(cuid())
+  userId          String
+  generationId    String?
+  kind            String
+  storageKey      String            @unique
+  publicUrl       String            @unique
+  mimeType        String
+  contentHash     String
+  generatedAt     DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation      ProfileGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([generationId])
+}
+
+model PublishEvent {
+  id              String           @id @default(cuid())
+  userId          String
+  generationId    String?
+  mode            PublishMode
+  status          GenerationStatus @default(draft)
+  targetRepo      String?
+  targetBranch    String?
+  committedSha    String?
+  errorMessage    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation      ProfileGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([generationId])
+}
