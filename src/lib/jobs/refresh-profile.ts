@@ -11,7 +11,10 @@
  * - `classifyRefreshPlan` — determines what's safe to update based on options
  * - `buildRefreshActions` — converts a plan into an ordered action list
  * - `executeRefreshPlan` — runs the actions and returns results
+ * - `describeRefreshForUser` — user-facing messaging via reliability guards
  */
+
+import { describeRefreshType } from "@/lib/reliability/guards";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -200,4 +203,21 @@ export async function executeRefreshPlan(
     actionsCompleted,
     errors,
   };
+}
+
+// ---------------------------------------------------------------------------
+// User-facing refresh description
+// ---------------------------------------------------------------------------
+
+/**
+ * Produce a user-facing description of what a refresh will do.
+ *
+ * Delegates to the reliability guards module to classify the operation
+ * as "safe" (metrics/assets only) or "destructive" (narrative rewrite)
+ * and generate appropriate messaging.
+ */
+export function describeRefreshForUser(options: RefreshOptions) {
+  return describeRefreshType({
+    rewriteNarrative: options.rewriteNarrative ?? false,
+  });
 }

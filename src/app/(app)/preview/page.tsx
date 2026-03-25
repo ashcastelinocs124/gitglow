@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { composeReadme } from "@/lib/readme/compose-readme";
 import type { ReadmeInput } from "@/lib/readme/compose-readme";
 import PreviewTabs from "./preview-tabs";
+import PublishStatus from "./publish-status";
 
 // ---------------------------------------------------------------------------
 // Sample data — used until the real generation pipeline is wired in
@@ -77,6 +78,7 @@ export default async function PreviewPage() {
           <p className="mt-2 text-slate-400">
             See how your generated profile README will look on GitHub.
           </p>
+          <PublishStatus />
         </div>
 
         {/* Tabbed content (client component) */}

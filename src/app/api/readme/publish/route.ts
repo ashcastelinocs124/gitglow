@@ -7,6 +7,10 @@ import {
   validatePublishRequest,
   executePublish,
 } from "@/lib/jobs/publish-readme";
+import {
+  validateBeforePublish,
+  buildSyncFailureMessage,
+} from "@/lib/reliability/guards";
 
 /**
  * POST /api/readme/publish
@@ -17,6 +21,7 @@ import {
  * Body:
  * - `markdown: string` — The generated README content
  * - `mode: "manual" | "connected"` — How to publish
+ * - `hasPreviewConfirmation: boolean` — Whether the user has previewed the README
  *
  * Modes:
  * - "manual": Validates the request and returns the publish request details
@@ -34,9 +39,17 @@ export async function POST(request: Request) {
   }
 
   // Parse and validate the request body
-  let body: { markdown?: string; mode?: string };
+  let body: {
+    markdown?: string;
+    mode?: string;
+    hasPreviewConfirmation?: boolean;
+  };
   try {
-    body = (await request.json()) as { markdown?: string; mode?: string };
+    body = (await request.json()) as {
+      markdown?: string;
+      mode?: string;
+      hasPreviewConfirmation?: boolean;
+    };
   } catch {
     return NextResponse.json(
       { error: "Invalid JSON body" },
@@ -44,7 +57,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { markdown, mode } = body;
+  const { markdown, mode, hasPreviewConfirmation } = body;
 
   if (!markdown || typeof markdown !== "string") {
     return NextResponse.json(
@@ -56,6 +69,19 @@ export async function POST(request: Request) {
   if (mode !== "manual" && mode !== "connected") {
     return NextResponse.json(
       { error: 'mode must be "manual" or "connected"' },
+      { status: 400 },
+    );
+  }
+
+  // Pre-publish reliability guard: validate markdown quality and confirmation
+  const guard = validateBeforePublish({
+    markdown,
+    hasPreviewConfirmation: hasPreviewConfirmation ?? false,
+  });
+
+  if (!guard.safe) {
+    return NextResponse.json(
+      { error: guard.reason, warnings: guard.warnings },
       { status: 400 },
     );
   }
@@ -122,10 +148,16 @@ export async function POST(request: Request) {
   );
 
   if (!result.success) {
+    // Convert raw error into a user-friendly message
+    const userMessage = result.errorMessage
+      ? buildSyncFailureMessage(new Error(result.errorMessage))
+      : "Publish failed unexpectedly";
+
     return NextResponse.json(
       {
         success: false,
-        error: result.errorMessage,
+        error: userMessage,
+        warnings: guard.warnings,
       },
       { status: 502 },
     );
