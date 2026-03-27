@@ -15,6 +15,7 @@ import type {
   NormalizedRepository,
 } from "@/lib/github/import-profile";
 import type { AnalysisResult } from "@/lib/analysis/types";
+import { ARCHETYPE_OPTIONS } from "@/lib/profile/questionnaire";
 
 // Re-export so consumers can import from this module
 export type { AnalysisResult } from "@/lib/analysis/types";
@@ -120,9 +121,11 @@ export function parseAnalysisResponse(
       ? parsed.goals
       : fallback.goals;
 
+  const rawArchetype =
+    typeof parsed.archetype === "string" ? parsed.archetype.toLowerCase().trim() : "";
   const archetype =
-    typeof parsed.archetype === "string" && parsed.archetype.length > 0
-      ? parsed.archetype
+    (ARCHETYPE_OPTIONS as readonly string[]).includes(rawArchetype)
+      ? rawArchetype
       : fallback.archetype;
 
   const experienceOutsideGitHub =

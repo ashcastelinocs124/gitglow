@@ -1,14 +1,8 @@
 /**
  * README markdown composition entry point.
  *
- * `composeReadme` assembles a full GitHub profile README from a `ReadmeInput`
- * object. The input is a simplified, composer-friendly shape derived from
- * `ProfileModel` — keeping the composer testable without the full model.
- *
- * Section order: headline -> assets (top) -> about -> journey ->
- * featured projects -> stats -> footer.
- *
- * All output is valid GitHub-flavored markdown with no HTML tags.
+ * Section order: headline -> about -> featured projects -> journey ->
+ * stats (with GitHub cards) -> connect -> footer.
  */
 
 import type { ProfileModel } from "@/lib/profile/profile-model";
@@ -27,6 +21,7 @@ export interface AssetEmbed {
 }
 
 export interface ReadmeInput {
+  login?: string;
   headline: string;
   about: string;
   goals?: string;
@@ -50,19 +45,13 @@ export interface ReadmeInput {
 // Composer
 // ---------------------------------------------------------------------------
 
-/**
- * Assemble a full GitHub profile README from the given input.
- *
- * @param input - The simplified README input derived from a ProfileModel.
- * @returns A complete GitHub-flavored markdown string.
- */
 export function composeReadme(input: ReadmeInput): string {
   const sections: string[] = [];
 
   // --- Headline ---
   sections.push(`# ${input.headline}`);
 
-  // --- Assets (between headline and about) ---
+  // --- Visual cards (activity, languages, timeline) ---
   if (input.assets && input.assets.length > 0) {
     const assetLines = input.assets
       .map((asset) => `![${asset.alt}](${asset.url})`)
@@ -73,6 +62,12 @@ export function composeReadme(input: ReadmeInput): string {
   // --- About Me ---
   sections.push(renderAboutSection(input.about, input.goals));
 
+  // --- Featured Projects ---
+  const projects = renderProjectsSection(input.featuredProjects);
+  if (projects) {
+    sections.push(projects);
+  }
+
   // --- My Journey ---
   const journey = renderJourneySection(
     input.journeySummary,
@@ -82,21 +77,25 @@ export function composeReadme(input: ReadmeInput): string {
     sections.push(journey);
   }
 
-  // --- Featured Projects ---
-  const projects = renderProjectsSection(input.featuredProjects);
-  if (projects) {
-    sections.push(projects);
-  }
-
   // --- Stats ---
   const stats = renderStatsSection(
     input.languages,
     input.totalStars,
     input.totalForks,
     input.totalRepos,
+    input.login,
   );
   if (stats) {
     sections.push(stats);
+  }
+
+  // --- Connect ---
+  if (input.login) {
+    const connect: string[] = [];
+    connect.push("## Let's Connect");
+    connect.push("");
+    connect.push(`Want to collaborate or have feedback? Open an issue/PR in any of my repos or reach out on [GitHub](https://github.com/${input.login}).`);
+    sections.push(connect.join("\n"));
   }
 
   // --- Footer ---
@@ -110,17 +109,9 @@ export function composeReadme(input: ReadmeInput): string {
 // ProfileModel -> ReadmeInput mapping
 // ---------------------------------------------------------------------------
 
-/**
- * Map a full `ProfileModel` to a `ReadmeInput` suitable for the composer.
- *
- * This keeps the composer decoupled from the ProfileModel shape while
- * providing a convenient one-liner for production use.
- *
- * @param model - The structured profile model.
- * @returns A ReadmeInput ready to pass to `composeReadme`.
- */
 export function profileModelToReadmeInput(model: ProfileModel): ReadmeInput {
   return {
+    login: model.login,
     headline: model.headline,
     about: model.aboutSummary,
     goals: model.goals,
@@ -137,6 +128,5 @@ export function profileModelToReadmeInput(model: ProfileModel): ReadmeInput {
     totalForks: model.totalForks,
     totalRepos: model.totalRepos,
     recentlyActiveRepos: model.recentlyActiveRepos,
-    // assets are not part of ProfileModel — they come from the asset pipeline
   };
 }

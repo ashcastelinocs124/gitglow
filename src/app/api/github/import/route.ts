@@ -1,55 +1,52 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { importGitHubProfile } from "@/lib/github/import-profile";
+import { setImportData } from "@/lib/store";
 
 /**
  * POST /api/github/import
  *
- * Triggers a GitHub profile import for the authenticated user.
- * Fetches the user's profile and repositories from GitHub, normalizes the
- * data, and returns it. The caller can then decide what to persist.
+ * Fetches the authenticated user's GitHub profile and repositories,
+ * normalizes the data, stores it in memory, and returns it.
  */
 export async function POST() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session.accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Look up the user and their GitHub account
-  const user = await db.user.findUnique({
-    where: { email: session.user.email },
-    include: { githubAccounts: true },
-  });
+  try {
+    const payload = await importGitHubProfile(session.accessToken);
+    setImportData(session.user.email, payload);
 
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return NextResponse.json({ success: true, data: payload });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Import failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
+}
 
-  const githubAccount = user.githubAccounts[0];
+/**
+ * GET /api/github/import
+ *
+ * Returns cached import data if available, otherwise triggers a fresh import.
+ */
+export async function GET() {
+  const session = await getServerSession(authOptions);
 
-  if (!githubAccount?.accessToken) {
-    return NextResponse.json(
-      { error: "No GitHub account linked or access token missing" },
-      { status: 400 },
-    );
+  if (!session?.user?.email || !session.accessToken) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const payload = await importGitHubProfile(githubAccount.accessToken);
+    const payload = await importGitHubProfile(session.accessToken);
+    setImportData(session.user.email, payload);
 
-    return NextResponse.json({
-      success: true,
-      data: payload,
-    });
+    return NextResponse.json({ success: true, data: payload });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Import failed";
-    return NextResponse.json(
-      { error: message },
-      { status: 502 },
-    );
+    const message = error instanceof Error ? error.message : "Import failed";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

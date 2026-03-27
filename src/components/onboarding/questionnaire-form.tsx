@@ -81,8 +81,11 @@ export default function QuestionnaireForm() {
         );
       }
 
-      // On success, redirect to dashboard (or next step)
-      window.location.href = "/dashboard";
+      // On success, scroll to featured projects section
+      const featured = document.getElementById("featured-projects");
+      if (featured) {
+        featured.scrollIntoView({ behavior: "smooth" });
+      }
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Something went wrong",

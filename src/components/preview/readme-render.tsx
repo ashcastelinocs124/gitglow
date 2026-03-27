@@ -262,9 +262,63 @@ export default function ReadmeRender({ markdown }: ReadmeRenderProps) {
   const html = markdownToHtml(markdown);
 
   return (
-    <div
-      className="rounded-lg bg-slate-900 p-6 md:p-8"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .readme-preview h1 { animation: fadeInUp 0.6s ease-out; }
+        .readme-preview h2 { animation: fadeInUp 0.5s ease-out; }
+        .readme-preview h3 { animation: fadeIn 0.4s ease-out; }
+        .readme-preview img {
+          animation: scaleIn 0.7s ease-out;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .readme-preview img:hover {
+          transform: scale(1.02);
+          box-shadow: 0 8px 30px rgba(52, 211, 153, 0.15);
+        }
+        .readme-preview table {
+          animation: fadeIn 0.6s ease-out;
+        }
+        .readme-preview table tr {
+          animation: slideInLeft 0.4s ease-out;
+          animation-fill-mode: both;
+        }
+        .readme-preview table tr:nth-child(1) { animation-delay: 0.1s; }
+        .readme-preview table tr:nth-child(2) { animation-delay: 0.15s; }
+        .readme-preview table tr:nth-child(3) { animation-delay: 0.2s; }
+        .readme-preview table tr:nth-child(4) { animation-delay: 0.25s; }
+        .readme-preview table tr:nth-child(5) { animation-delay: 0.3s; }
+        .readme-preview table tr:nth-child(6) { animation-delay: 0.35s; }
+        .readme-preview table tr:nth-child(7) { animation-delay: 0.4s; }
+        .readme-preview ul li {
+          animation: fadeIn 0.4s ease-out;
+          animation-fill-mode: both;
+        }
+        .readme-preview ul li:nth-child(1) { animation-delay: 0.1s; }
+        .readme-preview ul li:nth-child(2) { animation-delay: 0.2s; }
+        .readme-preview ul li:nth-child(3) { animation-delay: 0.3s; }
+        .readme-preview ul li:nth-child(4) { animation-delay: 0.4s; }
+        .readme-preview p { animation: fadeIn 0.5s ease-out; }
+      `}</style>
+      <div
+        className="readme-preview rounded-lg bg-slate-900 p-6 md:p-8"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </>
   );
 }

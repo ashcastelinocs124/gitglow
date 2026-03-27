@@ -56,17 +56,16 @@ function makeFullInput(): ReadmeInput {
 // ---------------------------------------------------------------------------
 
 describe("README composition", () => {
-  it("renders GitHub-flavored markdown with hosted assets", async () => {
+  it("renders GitHub-flavored markdown with headline and about", async () => {
     const { composeReadme } = await import("@/lib/readme/compose-readme");
 
     const markdown = composeReadme({
       headline: "Hi, I'm Ash",
       about: "I build systems",
-      assets: [{ alt: "Activity graph", url: "https://example.com/a.png" }],
     });
 
-    expect(markdown).toContain("![Activity graph](https://example.com/a.png)");
     expect(markdown).toContain("Hi, I'm Ash");
+    expect(markdown).toContain("I build systems");
   });
 
   it("renders with no assets", async () => {
@@ -204,39 +203,37 @@ describe("section ordering", () => {
     expect(aboutPos).toBeLessThan(journeyPos);
   });
 
-  it("journey comes before featured projects", async () => {
+  it("featured projects comes before journey", async () => {
+    const { composeReadme } = await import("@/lib/readme/compose-readme");
+
+    const markdown = composeReadme(makeFullInput());
+
+    const projectsPos = markdown.indexOf("## Projects I'm working on");
+    const journeyPos = markdown.indexOf("## My Journey");
+
+    expect(projectsPos).toBeLessThan(journeyPos);
+  });
+
+  it("journey comes before stats", async () => {
     const { composeReadme } = await import("@/lib/readme/compose-readme");
 
     const markdown = composeReadme(makeFullInput());
 
     const journeyPos = markdown.indexOf("## My Journey");
-    const projectsPos = markdown.indexOf("## Featured Projects");
+    const statsPos = markdown.indexOf("## GitHub Statistics");
 
-    expect(journeyPos).toBeLessThan(projectsPos);
+    expect(journeyPos).toBeLessThan(statsPos);
   });
 
-  it("featured projects comes before stats", async () => {
-    const { composeReadme } = await import("@/lib/readme/compose-readme");
-
-    const markdown = composeReadme(makeFullInput());
-
-    const projectsPos = markdown.indexOf("## Featured Projects");
-    const statsPos = markdown.indexOf("## Stats");
-
-    expect(projectsPos).toBeLessThan(statsPos);
-  });
-
-  it("assets appear between headline and about", async () => {
+  it("about comes first after headline", async () => {
     const { composeReadme } = await import("@/lib/readme/compose-readme");
 
     const markdown = composeReadme(makeFullInput());
 
     const headlinePos = markdown.indexOf("Hi, I'm Ash");
-    const assetPos = markdown.indexOf("![Activity graph]");
     const aboutPos = markdown.indexOf("## About Me");
 
-    expect(headlinePos).toBeLessThan(assetPos);
-    expect(assetPos).toBeLessThan(aboutPos);
+    expect(headlinePos).toBeLessThan(aboutPos);
   });
 });
 

@@ -13,12 +13,14 @@ import { createHash } from "node:crypto";
 import { renderActivityCard } from "@/lib/assets/templates/activity-card";
 import { renderLanguageCard } from "@/lib/assets/templates/language-card";
 import { renderJourneyCard } from "@/lib/assets/templates/journey-card";
+import { renderTimelineCard } from "@/lib/assets/templates/timeline-card";
+import { renderGrowthCard } from "@/lib/assets/templates/growth-card";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type AssetKind = "activity-card" | "language-card" | "journey-card";
+export type AssetKind = "activity-card" | "language-card" | "journey-card" | "timeline-card" | "growth-card";
 
 export interface GenerateAssetInput {
   kind: AssetKind;
@@ -48,6 +50,8 @@ const RENDERERS: Record<AssetKind, (data: Record<string, unknown>) => string> =
     "activity-card": renderActivityCard,
     "language-card": renderLanguageCard,
     "journey-card": renderJourneyCard,
+    "timeline-card": renderTimelineCard,
+    "growth-card": renderGrowthCard,
   };
 
 // ---------------------------------------------------------------------------

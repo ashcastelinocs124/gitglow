@@ -7,117 +7,86 @@ import {
   type SelectableRepository,
 } from "@/lib/profile/featured-projects";
 
-/**
- * Stateful wrapper that loads the user's imported repositories from the API
- * and manages the selected-featured-projects state during onboarding.
- *
- * Until the API endpoint exists (Task 7+), this component renders placeholder
- * demo data so the UI can be exercised visually.
- */
-
-// ---------------------------------------------------------------------------
-// Placeholder data — will be replaced with a real fetch once the API exists
-// ---------------------------------------------------------------------------
-
-const PLACEHOLDER_REPOS: SelectableRepository[] = [
-  {
-    id: "demo-1",
-    name: "gitglow",
-    stars: 128,
-    description: "Generate stunning GitHub profile READMEs from your activity.",
-    primaryLanguage: "TypeScript",
-    isPinned: true,
-  },
-  {
-    id: "demo-2",
-    name: "react-data-grid",
-    stars: 342,
-    description: "A lightweight, fast data-grid component for React.",
-    primaryLanguage: "TypeScript",
-    isPinned: false,
-  },
-  {
-    id: "demo-3",
-    name: "go-cache",
-    stars: 89,
-    description: "An in-memory key-value store with TTL eviction.",
-    primaryLanguage: "Go",
-    isPinned: true,
-  },
-  {
-    id: "demo-4",
-    name: "ml-pipeline",
-    stars: 56,
-    description: "End-to-end ML pipeline for tabular data.",
-    primaryLanguage: "Python",
-    isPinned: false,
-  },
-  {
-    id: "demo-5",
-    name: "dotfiles",
-    stars: 12,
-    description: null,
-    primaryLanguage: "Shell",
-    isPinned: false,
-  },
-  {
-    id: "demo-6",
-    name: "blog",
-    stars: 5,
-    description: "Personal blog built with Astro.",
-    primaryLanguage: "JavaScript",
-    isPinned: false,
-  },
-  {
-    id: "demo-7",
-    name: "rustlings-solutions",
-    stars: 3,
-    description: "My solutions to the Rustlings exercises.",
-    primaryLanguage: "Rust",
-    isPinned: false,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export default function OnboardingFeaturedProjects() {
   const [repos, setRepos] = useState<SelectableRepository[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Auto-suggest initial selection
-  const initialSuggestions = useMemo(() => {
-    if (repos.length === 0) return [];
-    return suggestFeaturedProjects(repos).map((r) => r.id);
-  }, [repos]);
+  // No auto-selection — let the user pick freely
+  const _suggestFeaturedProjects = suggestFeaturedProjects; // keep import used
 
-  // Load repositories (placeholder for now, will fetch from API later)
+  // Fetch real repos from GitHub via our API
   useEffect(() => {
-    // TODO: Replace with real fetch: GET /api/profile/repositories
-    const timer = setTimeout(() => {
-      setRepos(PLACEHOLDER_REPOS);
-      setLoading(false);
-    }, 0);
-    return () => clearTimeout(timer);
+    async function fetchRepos() {
+      try {
+        const res = await fetch("/api/github/import", { method: "POST" });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.error ?? `Failed to fetch repos (${res.status})`);
+        }
+        const json = await res.json();
+        const data = json.data;
+
+        if (!data?.repositories) {
+          throw new Error("No repository data returned");
+        }
+
+        const selectable: SelectableRepository[] = data.repositories.map(
+          (r: { githubRepoId: string; name: string; stars: number; description: string | null; primaryLanguage: string | null; isPinned: boolean }) => ({
+            id: r.githubRepoId,
+            name: r.name,
+            stars: r.stars,
+            description: r.description,
+            primaryLanguage: r.primaryLanguage,
+            isPinned: r.isPinned,
+          }),
+        );
+
+        setRepos(selectable);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load repositories");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRepos();
   }, []);
 
-  // Set initial suggestions once repos load
+  // Save featured selections whenever they change
   useEffect(() => {
-    if (initialSuggestions.length > 0 && selected.length === 0) {
-      setSelected(initialSuggestions);
+    if (selected.length > 0) {
+      fetch("/api/profile/featured", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featuredProjectIds: selected }),
+      }).catch(() => {});
     }
-  }, [initialSuggestions, selected.length]);
+  }, [selected]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-400" />
         <span className="ml-3 text-sm text-slate-400">
-          Loading repositories...
+          Fetching your GitHub repositories...
         </span>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        {error}
+      </div>
+    );
+  }
+
+  if (repos.length === 0) {
+    return (
+      <p className="text-sm text-slate-400">No repositories found on your GitHub account.</p>
     );
   }
 
